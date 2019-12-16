@@ -1,6 +1,6 @@
 #!/bin/sh
 
-FFMPEG_COMMAND="ffmpeg -y -v error -hide_banner -stats -i %s -map 0 -c:v h264_nvenc -preset bd -b:v %s -c:a copy -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
+FFMPEG_COMMAND="ffmpeg -y -v error -hide_banner -stats -i %q -map 0 -c:v h264_nvenc -preset bd -b:v %s -c:a copy -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
 TARGET_DIR="/mnt/bigvol"
 
 if [ "$1" == "" ]; then
