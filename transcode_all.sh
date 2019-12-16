@@ -19,6 +19,10 @@ do
         CURRENT_FILE=$(cut -d "|" -f 1 $1 | sed -n "$TR_LINE"p)
         CURRENT_TITLE=$(cut -d "|" -f 2 $1 | sed -n "$TR_LINE"p)
         CURRENT_GROUP=$(cut -d "|" -f 3 $1 | sed -n "$TR_LINE"p)
+        CURRENT_BITRATE=$(cut -d "|" -f 4 $1 | sed -n "$TR_LINE"p)
+        if [ "$CURRENT_BITRATE" == "" ]; then
+                CURRENT_BITRATE="6M"
+        fi
         if [ "$CURRENT_GROUP" == "" ]; then
                 CURRENT_GROUP="$CURRENT_TITLE"
         fi
