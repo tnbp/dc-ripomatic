@@ -11,7 +11,12 @@ if [ ! -f "$1" ]; then
         echo "File not found: $1"
         exit 1
 fi
+
+let "SUCCESS_COUNT=0"
+let "FAIL_COUNT=0"
+
 FILE_COUNT=$(wc -l < "$1")
+echo "### Starting batch of $FILE_COUNT files: $(date -u)" >> transcode_all.log
 
 for TR_LINE in `seq "$FILE_COUNT"`
 do
@@ -30,8 +35,20 @@ do
                 mkdir -p "$TARGET_DIR/$CURRENT_GROUP"
         fi
         CURRENT_COMMAND=$(printf "$FFMPEG_COMMAND" "$CURRENT_FILE" "$CURRENT_BITRATE" "$TARGET_DIR" "$CURRENT_GROUP" "$CURRENT_TITLE")
+        echo "Transcoding file #$TR_LINE... (of $FILE_COUNT): $CURRENT_TITLE (Group: $CURRENT_GROUP | Bitrate: $CURRENT_BITRATE)"
         eval "$CURRENT_COMMAND"
+        SUCCESS=$?
+	if [ "$SUCCESS" -eq 0 ]; then
+		echo "$(date -u): Successfully finished transcoding file: $CURRENT_FILE" >> transcode_all.log
+		let "SUCCESS_COUNT++"
+	else
+		echo "$(date -u): Failed transcoding file: $CURRENT_FILE (error code: $SUCCESS)" >> transcode_all.log
+		let "FAIL_COUNT++"
+	fi
 done
+
+echo "### Ending batch of $FILE_COUNT files on $(date -u):" >> transcode_all.log
+echo "### SUCCESS: $SUCCESS_COUNT files; FAILED: $FAIL_COUNT files" >> transcode_all.log
 
 if [ "$2" == "n" ]; then
         echo "All done--goodbye! :)"
@@ -39,4 +56,5 @@ if [ "$2" == "n" ]; then
 fi
 echo "All done--going to sleep! :)"
 sleep 60
+echo "### AUTOMATIC SHUTDOWN on $(date -u)"
 sudo shutdown -h now
