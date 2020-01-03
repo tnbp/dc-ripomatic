@@ -1,6 +1,6 @@
 #!/bin/sh
 
-FFMPEG_COMMAND="ffmpeg -y -v error -hide_banner -stats -i %q -map 0 -c:v h264_nvenc -preset bd -b:v %s -c:a copy -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
+FFMPEG_COMMAND="ffmpeg -y -v error -hide_banner -stats -i %q -map 0 -c:v h264_nvenc -preset bd -b:v %s -c:a copy -c:s copy -c:d copy -c:t copy %s %q/%q/%q.mkv"
 TARGET_DIR="/mnt/bigvol"
 
 if [ "$1" == "" ]; then
@@ -38,8 +38,8 @@ do
         if [ ! -d "$TARGET_DIR/$CURRENT_GROUP" ]; then
                 mkdir -p "$TARGET_DIR/$CURRENT_GROUP"
         fi
-        CURRENT_COMMAND=$(printf "$FFMPEG_COMMAND" "$CURRENT_FILE" "$CURRENT_BITRATE" "$TARGET_DIR" "$CURRENT_GROUP" "$CURRENT_TITLE")
-        echo "Transcoding file #$TR_LINE... (of $FILE_COUNT): $CURRENT_TITLE (Group: $CURRENT_GROUP | Bitrate: $CURRENT_BITRATE)"
+        	CURRENT_COMMAND=$(printf "$FFMPEG_COMMAND" "$CURRENT_FILE" "$CURRENT_BITRATE" "$CURRENT_EXTRA_PARAMS" "$TARGET_DIR" "$CURRENT_GROUP" "$CURRENT_TITLE")
+	echo "Transcoding file #$TR_LINE... (of $FILE_COUNT): $CURRENT_TITLE (Group: $CURRENT_GROUP | Bitrate: $CURRENT_BITRATE)"
         eval "$CURRENT_COMMAND"
         SUCCESS=$?
 	if [ "$SUCCESS" -eq 0 ]; then
