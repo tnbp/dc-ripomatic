@@ -8,3 +8,5 @@
 /mnt/smb/0/ripomatic/Video/1576261812-bluray/Better_Call_Saul_-_Season_2_-_Disc_1_t03.mkv|Better Call Saul 2x04|Better Call Saul/Season 2|6M
 /mnt/smb/0/ripomatic/Video/1576273316-bluray/Better_Call_Saul_-_Season_2_-_Disc_3_t00.mkv|Better Call Saul 2x09|Better Call Saul/Season 2|6M
 /mnt/smb/0/ripomatic/Video/1576273316-bluray/Better_Call_Saul_-_Season_2_-_Disc_3_t01.mkv|Better Call Saul 2x10|Better Call Saul/Season 2|6M
+/mnt/smb/0/ripomatic/Video/Quantum of Solace.mkv||James Bond|3M
+/mnt/smb/0/ripomatic/Video/Skyfall.mkv||James Bond|3M|qmin=18 qmax=25
