@@ -34,8 +34,9 @@ if [ "$is_video_dvd" -gt 1 ]; then
 	targetdir="/mnt/servervol/ripomatic/Video/$(date +%s)-dvd"
 	mkdir -p "$targetdir"
 	makemkvcon --decrypt --minlength=1000 mkv disc:0 all "$targetdir"
+	exitcode="$?"
 	chmod 0777 "$targetdir"
-	exit $?
+	exit "$exitcode"
 else
 	echo "That's not a video DVD!"
 fi
@@ -48,8 +49,9 @@ if [ "$is_bluray" -gt 1 ]; then
 		targetdir="/mnt/servervol/ripomatic/Video/$(date +%s)-bluray"
         	mkdir -p "$targetdir"
         	makemkvcon --decrypt --minlength=1000 mkv disc:0 all "$targetdir"
+		exitcode="$?"
 		chmod 0777 "$targetdir"
-		exit $?
+		exit "$exitcode"
 	else
 		echo "But it's not a Blu-ray video disc!"
 	fi
