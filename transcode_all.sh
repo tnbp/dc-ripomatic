@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# rate_stream(): not great, but works
 rate_stream () {
         case "$1" in
                 truehd)
@@ -97,7 +98,7 @@ do
                 for BS in "${BEST_STREAMS[@]}"; do
                         SELECTED_STREAMS+="$BS "
                 done
-                #CURRENT_MAP="-map "
+                # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE #
                 CURRENT_MAP+=$(echo "$SELECTED_STREAMS" | tr " " "\n" | sort -t: -k 1,1n -k 2,2n | tr "\n" "-" | sed "s/-/ -map /g" | sed "s/ -map $//g")
         else
                 CURRENT_MAP="-map 0"
@@ -113,8 +114,7 @@ do
         else
                 echo " | extra prm: $CURRENT_EXTRA_PARAMS)"
         fi
-        echo "$CURRENT_COMMAND"
-        #eval "$CURRENT_COMMAND"
+        eval "$CURRENT_COMMAND"
         SUCCESS=$?
         if [ "$SUCCESS" -eq 0 ]; then
                 echo "$(date -u): Successfully finished transcoding file: $CURRENT_FILE" >> transcode_all.log
