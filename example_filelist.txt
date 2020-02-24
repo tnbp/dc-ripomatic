@@ -10,4 +10,4 @@
 /mnt/smb/0/ripomatic/Video/1576273316-bluray/Better_Call_Saul_-_Season_2_-_Disc_3_t01.mkv|Better Call Saul 2x10|Better Call Saul/Season 2|6M
 /mnt/smb/0/ripomatic/Video/Quantum of Solace.mkv||James Bond|3M
 /mnt/smb/0/ripomatic/Video/Skyfall.mkv||James Bond|3M|qmin=18 qmax=25
-/mnt/smb/0/ripomatic/Video/Mr. Robot/Season 2/Mr. Robot eps2.2_init_1.asec.mkv||Mr. Robot/Season 2|3M|libvorbis -qscale:a 6|-qmin 24 -qmax 28
+/mnt/smb/0/ripomatic/Video/Mr. Robot/Season 2/Mr. Robot eps2.2_init_1.asec.mkv||Mr. Robot/Season 2|3M|libvorbis -qscale:a 6|eng deu ger|-qmin 24 -qmax 28
