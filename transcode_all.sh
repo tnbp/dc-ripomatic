@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# rate_stream(): not great, but works
 rate_stream () {
         case "$1" in
                 truehd)
@@ -11,6 +10,11 @@ rate_stream () {
                         echo 99
                         ;;
 
+                pcm_s16le)
+                        echo 95
+                        ;;
+
+                
                 dts\ \(DTS\))
                         echo 90
                         ;;
@@ -81,7 +85,7 @@ do
                         MAP_BIGNO=$(echo "$CURRENT_LINE" | sed -r 's/Stream #([0-9]+):([0-9]+).*/\1/g')
                         MAP_SMLNO=$(echo "$CURRENT_LINE" | sed -r 's/Stream #[0-9]+:([0-9]+).*/\1/g')
                         MAP_LANG=$(echo "$CURRENT_LINE" | sed -r 's/Stream #[0-9]+:[0-9]+\(([a-z]+)\).*/\1/g')
-                        MAP_TYPE=$(echo "$CURRENT_LINE" | sed -r 's/Stream #[0-9]+:[0-9]+\([a-z]+\): ([a-zA-Z]+): .*/\1/g')
+                        MAP_TYPE=$(echo "$CURRENT_LINE" | sed -r 's/Stream #[0-9]+:[0-9]+\(?[a-z]*\)?: ([a-zA-Z]+): .*/\1/g')
                         if [ "$MAP_TYPE" != "Audio" ]; then
                                 SELECTED_STREAMS+="$MAP_BIGNO:$MAP_SMLNO "
                         else
@@ -98,7 +102,6 @@ do
                 for BS in "${BEST_STREAMS[@]}"; do
                         SELECTED_STREAMS+="$BS "
                 done
-                # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE # TERRIBLE #
                 CURRENT_MAP+=$(echo "$SELECTED_STREAMS" | tr " " "\n" | sort -t: -k 1,1n -k 2,2n | tr "\n" "-" | sed "s/-/ -map /g" | sed "s/ -map $//g")
         else
                 CURRENT_MAP="-map 0"
@@ -114,6 +117,7 @@ do
         else
                 echo " | extra prm: $CURRENT_EXTRA_PARAMS)"
         fi
+        echo "$CURRENT_COMMAND"
         eval "$CURRENT_COMMAND"
         SUCCESS=$?
         if [ "$SUCCESS" -eq 0 ]; then
@@ -126,6 +130,8 @@ do
         unset BEST_STREAMS
         unset BEST_VALUES
         unset SELECTED_STREAMS
+        unset CURRENT_MAP
+        sleep 5
 done
 
 echo "### Ending batch of $FILE_COUNT files on $(date -u):" >> transcode_all.log
