@@ -98,7 +98,7 @@ do
                                         fi
                                 fi
                         fi
-                done <<< $(ffmpeg -i "$CURRENT_FILE" &> /dev/stdout | grep "Stream #")
+                done <<< $(ffmpeg -i "$CURRENT_FILE" &> /dev/stdout | grep "^\s*Stream #")
                 for BS in "${BEST_STREAMS[@]}"; do
                         SELECTED_STREAMS+="$BS "
                 done
