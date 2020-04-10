@@ -117,7 +117,7 @@ do
         else
                 echo " | extra prm: $CURRENT_EXTRA_PARAMS)"
         fi
-        echo "$CURRENT_COMMAND"
+        #echo "$CURRENT_COMMAND"
         eval "$CURRENT_COMMAND"
         SUCCESS=$?
         if [ "$SUCCESS" -eq 0 ]; then
