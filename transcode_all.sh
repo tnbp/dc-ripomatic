@@ -29,7 +29,7 @@ rate_stream () {
         esac
 }
 
-FFMPEG_COMMAND="ffmpeg -y -v error -hide_banner -stats -i %q %s -c:v h264_nvenc -preset bd %s -b:v %s -c:a %s -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
+FFMPEG_COMMAND="ffmpeg -y -v error -hide_banner -stats -i %q %s -c:v h264_nvenc -preset bd -pix_fmt yuv420p %s -b:v %s -c:a %s -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
 TARGET_DIR="/mnt/bigvol"
 
 if [ "$1" == "" ]; then
