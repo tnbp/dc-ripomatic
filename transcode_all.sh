@@ -108,14 +108,14 @@ do
         fi
 
         CURRENT_COMMAND=$(printf "$FFMPEG_COMMAND" "$CURRENT_FILE" "$CURRENT_MAP" "$CURRENT_EXTRA_PARAMS" "$CURRENT_BITRATE" "$CURRENT_AUDIO_PARAMS" "$TARGET_DIR" "$CURRENT_GROUP" "$CURRENT_TITLE")
-        echo -n "Transcoding file #$TR_LINE... (of $FILE_COUNT): $CURRENT_TITLE (Group: $CURRENT_GROUP | Bitrate: $CURRENT_BITRATE | Audio: $CURRENT_AUDIO_PARAMS"
+        echo -ne "Transcoding file \e[32m#$TR_LINE\e[0m... (of \e[32m$FILE_COUNT\e[0m): \e[96m$CURRENT_TITLE\e[0m (Group: \e[93m$CURRENT_GROUP\e[0m | Bitrate: \e[93m$CURRENT_BITRATE\e[0m | Audio: \e[93m$CURRENT_AUDIO_PARAMS\e[0m"
         if [ "$CURRENT_LANG_WHITELIST" != "" ]; then
-                echo -n " | Languages: $CURRENT_LANG_WHITELIST"
+                echo -ne " | Languages: \e[93m$CURRENT_LANG_WHITELIST\e[0m"
         fi
         if [ "$CURRENT_EXTRA_PARAMS" == "" ]; then
                 echo ")"
         else
-                echo " | extra prm: $CURRENT_EXTRA_PARAMS)"
+                echo -e " | extra prm: \e[91m$CURRENT_EXTRA_PARAMS\e[0m)"
         fi
         #echo "$CURRENT_COMMAND"
         eval "$CURRENT_COMMAND"
