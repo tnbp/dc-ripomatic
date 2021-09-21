@@ -29,7 +29,7 @@ rate_stream () {
         esac
 }
 
-FFMPEG_COMMAND="ffmpeg -y -v error -hide_banner -stats -i %q %s -c:v h264_nvenc -preset bd -pix_fmt yuv420p %s -b:v %s -c:a %s -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
+FFMPEG_COMMAND="ffmpeg -y -v error -hide_banner -stats -i %q %s -c:v h264_nvenc -preset bd -spatial-aq 1 -pix_fmt yuv420p %s -b:v %s -c:a %s -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
 TARGET_DIR="/mnt/bigvol"
 
 if [ "$1" == "" ]; then
@@ -126,6 +126,13 @@ do
         else
                 echo "$(date -u): Failed transcoding file: $CURRENT_FILE (error code: $SUCCESS)" >> transcode_all.log
                 let "FAIL_COUNT++"
+        fi
+        mkvpropedit "$TARGET_DIR/$CURRENT_GROUP/$CURRENT_TITLE.mkv" --edit info --set "title=$CURRENT_TITLE"
+        SUCCESS=$?
+        if [ "$SUCCESS" -eq 0 ]; then
+                echo "$(date -u): Successfully set title: $CURRENT_TITLE" >> transcode_all.log
+        else
+                echo "$(date -u): Failed to set title: $CURRENT_TITLE (error code: $SUCCESS)" >> transcode_all.log
         fi
         unset BEST_STREAMS
         unset BEST_VALUES
