@@ -44,7 +44,6 @@ do
         done
         echo
         echo
-        #echo "CUR_NPROC: $CUR_NPROC"
 done
 
 while true
