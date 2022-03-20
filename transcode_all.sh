@@ -59,7 +59,7 @@ echo
 echo "--- --- --- --- ---"
 echo "### Ending batch of $FILE_COUNT files on $(date -u):" >> transcode_all.log
 SUCCESS_COUNT=$(<.transcode_success)
-SUCCESS_FAIL=$(<.transcode_fail)
+FAIL_COUNT=$(<.transcode_fail)
 rm .transcode_success .transcode_fail
 echo "### SUCCESS: $SUCCESS_COUNT files; FAILED: $FAIL_COUNT files" >> transcode_all.log
 
