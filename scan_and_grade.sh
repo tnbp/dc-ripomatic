@@ -7,7 +7,7 @@ do
         CUR_LINE=$(cat .files_list.tmp | sed -n "$TR_LINE"p)
         CUR_TITLE=$(echo "$CUR_LINE" | sed "s/.*\/\(.*\)\..*/\1/")
         CUR_PATH=$(echo "$CUR_LINE" | sed "s/.*ripomatic\/Video\/\(.*\)\/.*\..*/\1/")
-        CUR_VIDEO=$(ffmpeg -i "$CUR_LINE" 2&>/dev/stdout | grep ".*Video:.* [0-9]\+x[0-9]\+.*" | grep -v "attached pic")
+        CUR_VIDEO=$(ffmpeg -i "$CUR_LINE" 2&>/dev/stdout | grep ".*Video:.* [0-9]\+x[0-9]\+.*" | grep -v "attached pic" | head -1)
         CUR_BITRATE=$(ffmpeg -i "$CUR_LINE" 2&>/dev/stdout | grep "bitrate" | sed "s/.*bitrate: \([0-9]\+\) kb\/s/\1/")
         BETTER_BITRATE=$(ffmpeg -i "$CUR_LINE" &>/dev/stdout | grep -A 2 "Video:" | grep BPS-eng | sed "s/BPS-eng.*: \([0-9]\+\)/\1/")
         if [[ "$BETTER_BITRATE" -gt 0 ]]; then
@@ -19,6 +19,17 @@ do
         echo "$CUR_PATH || $CUR_TITLE: $CUR_VIDEO || $CUR_HORIZONTAL || $CUR_CODEC || $CUR_BITRATE"
         REENCODE=0
         RESIZE=0
+
+        # CULL THE FUCKING ATTACHED PICS
+        ATTACHED_PICS=$(ffmpeg -i "$CUR_LINE" &>/dev/stdout | grep ".*Video:.* [0-9]\+x[0-9]\+.*" | grep "attached pic")
+        MAP_EXCLUDE=""
+        for AP_LINE in `seq $(echo "$ATTACHED_PICS" | wc -l)`
+        do
+                M=$(echo "$ATTACHED_PICS" | sed -n "$AP_LINE"p | sed "s/.*Stream #\([0-9]\+:[0-9]\+\).*/\1/")
+                if [ -n "${M}" ]; then
+                        MAP_EXCLUDE="$MAP_EXCLUDE-map -$M "
+                fi
+        done
 
         if [ "$CUR_HORIZONTAL" -lt 2000 ]; then
                 echo "GO H264!"
@@ -55,7 +66,8 @@ do
         fi
 
         # check if good bitrate
-        if [ "$CUR_HORIZONTAL" -ge 2000 ]; then
+        TARGET_BITRATE="H15M"
+        if [ "$CUR_VERTICAL" -ge 1200 ]; then
                 if [ "$CUR_BITRATE" -gt 20000 ]; then
                         echo "bitrate too high--re-encode!"
                         REENCODE=1
@@ -66,7 +78,7 @@ do
                         REENCODE=1
                         TARGET_BITRATE="H15M"
                 fi
-        elif [ "$CUR_HORIZONTAL" -ge 1300 ]; then
+        elif [ "$CUR_VERTICAL" -ge 900 ]; then
                 if [ "$CUR_BITRATE" -gt 8000 ]; then
                         echo "bitrate too high--re-encode!"
                         REENCODE=1
@@ -77,7 +89,7 @@ do
                         REENCODE=1
                         TARGET_BITRATE="6M"
                 fi
-        elif [ "$CUR_HORIZONTAL" -ge 800 ]; then
+        elif [ "$CUR_VERTICAL" -ge 600 ]; then
                 if [ "$CUR_BITRATE" -gt 5000 ]; then
                         echo "bitrate too high--re-encode!"
                         REENCODE=1
@@ -88,7 +100,7 @@ do
                         REENCODE=1
                         TARGET_BITRATE="4M"
                 fi
-        elif [ "$CUR_HORIZONTAL" -ge 500 ]; then
+        elif [ "$CUR_VERTICAL" -ge 400 ]; then
                 if [ "$CUR_BITRATE" -gt 2500 ]; then
                         echo "bitrate too high--re-encode!"
                         REENCODE=1
@@ -113,12 +125,24 @@ do
         fi
 
         if [ "$REENCODE" -eq 0 ]; then
-                echo "$CUR_LINE|$CUR_TITLE|$CUR_PATH|copy|libvorbis -qscale:a 6" >> .transcode_list.tmp
+                if [ -z "${MAP_EXCLUDE}" ]; then
+                        echo "$CUR_LINE|$CUR_TITLE|$CUR_PATH|copy|libvorbis -qscale:a 6" >> .transcode_list.tmp
+                else
+                        echo "$CUR_LINE|$CUR_TITLE|$CUR_PATH|copy|libvorbis -qscale:a 6||$MAP_EXCLUDE" >> .transcode_list.tmp
+                fi
         else
                 if [ "$RESIZE" -eq 0 ]; then
-                        echo "$CUR_LINE|$CUR_TITLE|$CUR_PATH|$TARGET_BITRATE|libvorbis -qscale:a 6" >> .transcode_list.tmp
+                        if [ -z "${MAP_EXCLUDE}" ]; then
+                                echo "$CUR_LINE|$CUR_TITLE|$CUR_PATH|$TARGET_BITRATE|libvorbis -qscale:a 6" >> .transcode_list.tmp
+                        else
+                                echo "$CUR_LINE|$CUR_TITLE|$CUR_PATH|$TARGET_BITRATE|libvorbis -qscale:a 6||$MAP_EXCLUDE" >> .transcode_list.tmp
+                        fi
                 else
-                        echo "$CUR_LINE|$CUR_TITLE|$CUR_PATH|$TARGET_BITRATE|libvorbis -qscale:a 6||-vf \"scale=$CUR_HORIZONTAL:$TARGET_VERTICAL:force_original_aspect_ratio=decrease,pad=$CUR_HORIZONTAL:$TARGET_VERTICAL:(ow-iw)/2:(oh-ih)/2,setsar=1\"" >> .transcode_list.tmp
+                        if [ -z "${MAP_EXCLUDE}" ]; then
+                                echo "$CUR_LINE|$CUR_TITLE|$CUR_PATH|$TARGET_BITRATE|libvorbis -qscale:a 6||-vf \"scale=$CUR_HORIZONTAL:$TARGET_VERTICAL:force_original_aspect_ratio=decrease,pad=$CUR_HORIZONTAL:$TARGET_VERTICAL:(ow-iw)/2:(oh-ih)/2,setsar=1\"" >> .transcode_list.tmp
+                        else
+                                echo "$CUR_LINE|$CUR_TITLE|$CUR_PATH|$TARGET_BITRATE|libvorbis -qscale:a 6||-vf \"scale=$CUR_HORIZONTAL:$TARGET_VERTICAL:force_original_aspect_ratio=decrease,pad=$CUR_HORIZONTAL:$TARGET_VERTICAL:(ow-iw)/2:(oh-ih)/2,setsar=1\" $MAP_EXCLUDE" >> .transcode_list.tmp
+                        fi
                 fi
         fi
 done
