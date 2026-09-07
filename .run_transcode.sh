@@ -14,7 +14,7 @@ rate_stream () {
                         echo 95
                         ;;
 
-                
+
                 dts\ \(DTS\))
                         echo 90
                         ;;
@@ -29,9 +29,27 @@ rate_stream () {
         esac
 }
 
-FFMPEG_COMMAND_FULL="ffmpeg -y -v error -hide_banner -stats -threads 4 -i %q %s -c:v h264_nvenc -preset bd -spatial-aq 1 -pix_fmt yuv420p %s -b:v %s -c:a %s -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
-FFMPEG_COMMAND_H265="ffmpeg -y -v error -hide_banner -stats -i %q %s -c:v hevc_nvenc -profile:v main10 -spatial-aq 1 -pix_fmt p010le -b_ref_mode disabled %s -b:v %s -c:a %s -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
-FFMPEG_COMMAND_COPY="ffmpeg -y -v error -hide_banner -stats -threads 4 -i %q %s -c:v copy -c:a %s -c:s copy -c:d copy -c:t copy %q/%q/%q.mkv"
+get_video_stream() {
+    echo $(ffmpeg -i "$1" &>/dev/stdout | grep "Stream.*: Video:" | head -n 1 | sed "s/^.*Stream #\([0-9]\+:[0-9]\+\).*/\1/g")
+}
+
+get_audio_map() {
+    MAP=$(ffmpeg -i "$1" &>/dev/stdout | grep "Stream.*: Audio:" | sed "s/^.*Stream #\([0-9]\+:[0-9]\+\).*/\1/g")
+    echo ${MAP//\\n/}
+}
+
+FFMPEG_COMMAND_H264_EXTRA="ffmpeg -y -v error -hide_banner -stats -threads 4 -i %q %s -c:v h264_qsv -spatial-aq 1 %s -b:v %s -an -sn -dn %q/.video/%q/%q.mkv"
+FFMPEG_COMMAND_H264="$FFMPEG_COMMAND_H264_EXTRA"
+#FFMPEG_COMMAND_H265="ffmpeg -init_hw_device qsv=hw -filter_hw_device hw -hwaccel qsv -hwaccel_output_format qsv -y -v error -hide_banner -stats -i %q %s -c:v hevc_qsv -spatial-aq 1 %s -b:v %s -an -sn -dn %q/.video/%q/%q.mkv"
+FFMPEG_COMMAND_H265_EXTRA="ffmpeg -y -v error -hide_banner -stats -i %q %s -c:v hevc_qsv -spatial-aq 1 %s -b:v %s -an -sn -dn %q/.video/%q/%q.mkv"
+FFMPEG_COMMAND_H265="$FFMPEG_COMMAND_H265_EXTRA"
+#FFMPEG_COMMAND_AV1="ffmpeg -init_hw_device qsv=hw -filter_hw_device hw -hwaccel qsv -hwaccel_output_format qsv -y -v error -hide_banner -stats -i %q %s -c:v av1_qsv -spatial-aq 1 %s -b:v %s -an -sn -dn %q/.video/%q/%q.mkv"
+FFMPEG_COMMAND_AV1_EXTRA="ffmpeg -y -v error -hide_banner -stats -i %q %s -c:v av1_qsv -spatial-aq 1 %s -b:v %s -an -sn -dn %q/.video/%q/%q.mkv"
+FFMPEG_COMMAND_AV1="$FFMPEG_COMMAND_AV1_EXTRA"
+FFMPEG_COMMAND_COPY="ffmpeg -y -v error -hide_banner -stats -threads 4 -i %q %s -c:v copy -an -sn -dn %q/.video/%q/%q.mkv"
+
+FFMPEG_AUDIO_COMMAND="ffmpeg -y -v error -hide_banner -stats -i %q %s -c:a %s -vn -c:s copy -dn -c:t copy %q/.audio/%q/%q.mkv"
+
 TARGET_DIR="/mnt/bigvol"
 
 declare -A BEST_STREAMS
@@ -44,6 +62,7 @@ CURRENT_AUDIO_PARAMS=$(echo "$1" | cut -d "|" -f 5)
 CURRENT_LANG_WHITELIST=$(echo "$1" | cut -d "|" -f 6)
 CURRENT_EXTRA_PARAMS=$(echo "$1" | cut -d "|" -f 7)
 CURRENT_H265=0
+CURRENT_AV1=0
 
 for LANG in $CURRENT_LANG_WHITELIST; do
         BEST_VALUES[$LANG]="-1"
@@ -67,14 +86,30 @@ if [ ! -d "$TARGET_DIR/$CURRENT_GROUP" ]; then
 fi
 
 if [ "$CURRENT_BITRATE" == "copy" ]; then
-        FFMPEG_COMMAND="$FFMPEG_COMMAND_COPY"
+        FFMPEG_VIDEO_COMMAND="$FFMPEG_COMMAND_COPY"
 elif [[ "$CURRENT_BITRATE" == H* ]]; then
         CURRENT_H265=1
         CURRENT_BITRATE="${CURRENT_BITRATE:1}"
-        FFMPEG_COMMAND="$FFMPEG_COMMAND_H265"
+        FFMPEG_VIDEO_COMMAND="$FFMPEG_COMMAND_H265"
+        if [[ "$CURRENT_EXTRA_PARAMS" != "" ]]; then
+                FFMPEG_VIDEO_COMMAND="$FFMPEG_COMMAND_H265_EXTRA"
+        fi
+elif [[ "$CURRENT_BITRATE" == A* ]]; then
+        CURRENT_AV1=1
+        CURRENT_BITRATE="${CURRENT_BITRATE:1}"
+        FFMPEG_VIDEO_COMMAND="$FFMPEG_COMMAND_AV1"
+        if [[ "$CURRENT_EXTRA_PARAMS" != "" ]]; then
+                FFMPEG_VIDEO_COMMAND="$FFMPEG_COMMAND_AV1_EXTRA"
+        fi
 else
-        FFMPEG_COMMAND="$FFMPEG_COMMAND_FULL"
+        FFMPEG_VIDEO_COMMAND="$FFMPEG_COMMAND_H264"
+        if [[ "$CURRENT_EXTRA_PARAMS" != "" ]]; then
+                FFMPEG_VIDEO_COMMAND="$FFMPEG_COMMAND_H264_EXTRA"
+        fi
 fi
+
+
+CURRENT_VIDEO_STREAM=$(get_video_stream "$CURRENT_FILE")
 
 if [ "$CURRENT_LANG_WHITELIST" != "" ]; then
         while read CURRENT_LINE; do
@@ -100,16 +135,23 @@ if [ "$CURRENT_LANG_WHITELIST" != "" ]; then
         done
         CURRENT_MAP+=$(echo "$SELECTED_STREAMS" | tr " " "\n" | sort -t: -k 1,1n -k 2,2n | tr "\n" "-" | sed "s/-/ -map /g" | sed "s/ -map $//g")
 else
-        CURRENT_MAP="-map 0"
+        CURRENT_VIDEO_STREAM=$(get_video_stream "$CURRENT_FILE")
+        CURRENT_MAP+="-map 0"
 fi
+CURRENT_MAP+=" -map -$CURRENT_VIDEO_STREAM "
 
 if [ "$CURRENT_BITRATE" = "copy" ]; then
-        CURRENT_COMMAND=$(printf "$FFMPEG_COMMAND" "$CURRENT_FILE" "$CURRENT_MAP" "$CURRENT_AUDIO_PARAMS" "$TARGET_DIR" "$CURRENT_GROUP" "$CURRENT_TITLE")
+        CURRENT_VIDEO_COMMAND=$(printf "$FFMPEG_VIDEO_COMMAND" "$CURRENT_FILE" "-map $CURRENT_VIDEO_STREAM" "$TARGET_DIR" "$CURRENT_GROUP" "$CURRENT_TITLE")
 else
-        CURRENT_COMMAND=$(printf "$FFMPEG_COMMAND" "$CURRENT_FILE" "$CURRENT_MAP" "$CURRENT_EXTRA_PARAMS" "$CURRENT_BITRATE" "$CURRENT_AUDIO_PARAMS" "$TARGET_DIR" "$CURRENT_GROUP" "$CURRENT_TITLE")
+        CURRENT_VIDEO_COMMAND=$(printf "$FFMPEG_VIDEO_COMMAND" "$CURRENT_FILE" "-map $CURRENT_VIDEO_STREAM" "$CURRENT_EXTRA_PARAMS" "$CURRENT_BITRATE" "$TARGET_DIR" "$CURRENT_GROUP" "$CURRENT_TITLE")
 fi
+
+CURRENT_AUDIO_COMMAND=$(printf "$FFMPEG_AUDIO_COMMAND" "$CURRENT_FILE" "$CURRENT_MAP" "$CURRENT_AUDIO_PARAMS" "$TARGET_DIR" "$CURRENT_GROUP" "$CURRENT_TITLE")
+
 if [ "$CURRENT_H265" -eq 1 ]; then
         echo -ne "\t\e[96m$CURRENT_TITLE\e[0m (Group: \e[93m$CURRENT_GROUP\e[0m | Bitrate: \e[93m$CURRENT_BITRATE\e[0m \e[5m\e[91mH.265\e[0m | Audio: \e[93m$CURRENT_AUDIO_PARAMS\e[0m"
+elif [ "$CURRENT_AV1" -eq 1 ]; then
+        echo -ne "\t\e[96m$CURRENT_TITLE\e[0m (Group: \e[93m$CURRENT_GROUP\e[0m | Bitrate: \e[93m$CURRENT_BITRATE\e[0m \e[5m\e[32mAV1\e[0m | Audio: \e[93m$CURRENT_AUDIO_PARAMS\e[0m"
 else
         echo -ne "\t\e[96m$CURRENT_TITLE\e[0m (Group: \e[93m$CURRENT_GROUP\e[0m | Bitrate: \e[93m$CURRENT_BITRATE\e[0m | Audio: \e[93m$CURRENT_AUDIO_PARAMS\e[0m"
 fi
@@ -121,36 +163,56 @@ if [ "$CURRENT_EXTRA_PARAMS" == "" ]; then
 else
         echo -e " | extra prm: \e[91m$CURRENT_EXTRA_PARAMS\e[0m)"
 fi
+echo -e "FFMPEG video command:\n$CURRENT_VIDEO_COMMAND\n"
+echo -e "FFMPEG audio command:\n$CURRENT_AUDIO_COMMAND\n"
+
+mkdir -p "$TARGET_DIR/.video/$CURRENT_GROUP"
+mkdir -p "$TARGET_DIR/.audio/$CURRENT_GROUP"
 
 if [ "$CURRENT_BITRATE" != "copy" ]; then
         echo 1 > .transcode_block_parallel
-        eval "$CURRENT_COMMAND"
+        #echo
+        #echo "!!! CURRENTLY BLOCKING !!!"
+        #echo
+        #sleep 100
+        eval "$CURRENT_VIDEO_COMMAND"
         SUCCESS=$?
         echo 0 > .transcode_block_parallel
 else
-        eval "$CURRENT_COMMAND"
+        eval "$CURRENT_VIDEO_COMMAND"
         SUCCESS=$?
 fi
 
 SUCCESS_COUNT=$(<.transcode_success)
 FAIL_COUNT=$(<.transcode_fail)
-if [ "$SUCCESS" -eq 0 ]; then
-        echo "$(date -u): Successfully finished transcoding file: $CURRENT_FILE" >> transcode_all.log
-        let "SUCCESS_COUNT++"
-else
-        echo "$(date -u): Failed transcoding file: $CURRENT_FILE (error code: $SUCCESS)" >> transcode_all.log
+
+if [ "$SUCCESS" -ne 0 ]; then
+        echo "$(date -u): Failed transcoding video: $CURRENT_FILE (error code: $SUCCESS)" >> transcode_all.log
         let "FAIL_COUNT++"
+else
+        echo "$(date -u): Successfully transcoded video: $CURRENT_FILE" >> transcode_all.log
+        eval "$CURRENT_AUDIO_COMMAND"
+        SUCCESS=$?
+        if [ "$SUCCESS" -ne 0 ]; then
+                echo "$(date -u): Failed transcoding audio: $CURRENT_FILE (error code: $SUCCESS)" >> transcode_all.log
+                let "FAIL_COUNT++"
+        else
+                echo "$(date -u): Successfully transcoded audio: $CURRENT_FILE" >> transcode_all.log
+                mkvmerge -o "$TARGET_DIR/$CURRENT_GROUP/$CURRENT_TITLE.mkv" --title "$CURRENT_TITLE" "$TARGET_DIR/.video/$CURRENT_GROUP/$CURRENT_TITLE.mkv" "$TARGET_DIR/.audio/$CURRENT_GROUP/$CURRENT_TITLE.mkv"
+                SUCCESS=$?
+                if [ "$SUCCESS" -eq 0 ]; then
+                        echo "$(date -u): Successfully merged MKV file: $CURRENT_FILE" >> transcode_all.log
+                        let "SUCCESS_COUNT++"
+                else
+                        echo "$(date -u): Failed to merge MKV file: $CURRENT_FILE" >> transcode_all.log
+                        let "FAIL_COUNT++"
+                fi
+        fi
 fi
+
 echo "$SUCCESS_COUNT" > .transcode_success
 echo "$FAIL_COUNT" > .transcode_fail
 
-mkvpropedit "$TARGET_DIR/$CURRENT_GROUP/$CURRENT_TITLE.mkv" --edit info --set "title=$CURRENT_TITLE"
-SUCCESS=$?
-if [ "$SUCCESS" -eq 0 ]; then
-        echo "$(date -u): Successfully set title: $CURRENT_TITLE" >> transcode_all.log
-else
-        echo "$(date -u): Failed to set title: $CURRENT_TITLE (error code: $SUCCESS)" >> transcode_all.log
-fi
 unset BEST_STREAMS
 unset BEST_VALUES
 unset SELECTED_STREAMS
